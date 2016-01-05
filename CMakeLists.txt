@@ -3,7 +3,7 @@ project(clog)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
 
-file(GLOB_RECURSE headers ${PROJECT_SOURCE_DIR}/include/*.h)
+file(GLOB_RECURSE headers ${PROJECT_SOURCE_DIR}/include/*.h ${PROJECT_SOURCE_DIR}/include/*.cc)
 file(GLOB sources ${PROJECT_SOURCE_DIR}/*.cpp)
 
 add_executable(${PROJECT_NAME} ${headers} ${sources})

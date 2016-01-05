@@ -1,45 +1,104 @@
 #pragma once
 
-#include "queue/block_bounded_queue.h"
-#include "queue/mpmc_bounded_queue.h"
-
 #include <string>
 #include <mutex>
+#include <atomic>
 #include <thread>
 
-enum class LoggerType : int
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+#include "details/format.h"
+#include "details/mpmc_bounded_queue.h"
+
+typedef std::chrono::high_resolution_clock logger_clock;
+
+struct log_content
 {
-    lockfree = 1,
-    block = 2
+    log_content() = default;
+    log_content(fmt::MemoryWriter&& in_writer)
+        : writer(std::move(in_writer))
+    {}
+
+    log_content(const log_content& other)
+    {
+        writer << fmt::BasicStringRef<char>(other.writer.data(), other.writer.size());
+    }
+
+    log_content(log_content&& other)
+        : writer(std::move(other.writer))
+    {}
+
+    log_content& operator = (log_content&& other)
+    {
+        writer = std::move(other.writer);
+        return *this;
+    }
+
+    fmt::MemoryWriter writer;
 };
 
-template <typename T>
 class clog
 {
 public:
-    virtual void info(const T&) = 0;
-    virtual void warning(const T&) = 0;
-    virtual void debug(const T&) = 0;
-    virtual void error(const T&) = 0;
-    virtual void fatal(const T&) = 0;
+    static clog* get_clog();
 
-    virtual ~clog() {}
-};
-
-clog* get_logger(LoggerType logger_type)
-{
-    static clog* log;
-    switch (logger_type)
+    clog()
+        : queue_(new mpmc_bounded_queue<log_content>(4096))
     {
-    case LoggerType::lockfree:
-        log = new lockfree_clog();
-        break;
-    case LoggerType::block:
-        log = new block_clog();
-        break;
-    default:
-        log = nullptr;
+        io_thread_ = new std::thread([this]{
+            while (true)
+            {
+                log_content msg;
+                queue_->dequeue(msg);
+                if (msg.writer.size() != 0) std::cerr << msg.writer.c_str() << std::endl;
+            }
+        });
     }
 
-    return log;
+    template <typename... Args> void trace(const char* fmt, const Args&... args);
+    template <typename... Args> void debug(const char* fmt, const Args&... args);
+
+    template <typename... Args>
+    void info(const char* fmt, const Args&... args)
+    {
+        write(fmt, args...);
+    }
+
+    template <typename... Args> void notice(const char* fmt, const Args&... args);
+    template <typename... Args> void warn(const char* fmt, const Args&... args);
+
+    template <typename... Args>
+    void write(const char* fmt, const Args&... args)
+    {
+        fmt::MemoryWriter out;
+        out.write(fmt, args...);
+        log_content msg(std::move(out));
+        queue_->enqueue(std::move(msg));
+    }
+
+private:
+    mpmc_bounded_queue<log_content>* queue_;
+    std::thread* io_thread_;
+
+    static std::atomic<clog*> instance_;
+    static std::mutex mutex_;
 };
+
+std::atomic<clog*> clog::instance_;
+std::mutex clog::mutex_;
+
+clog* clog::get_clog()
+{
+    if (instance_.load() == nullptr)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        if (instance_.load() == nullptr)
+        {
+            auto* tmp = new clog();
+            instance_.store(tmp);
+        }
+    }
+    return instance_.load();
+}

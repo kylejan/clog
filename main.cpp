@@ -5,25 +5,24 @@
 
 int main()
 {
-    block_bounded_queue<std::string> block_q(16);
-    mpmc_bounded_queue<std::string> lock_free_q(4096);
+    clog* log = clog::get_clog();
 
-    auto* thread_1 = new std::thread([&block_q]{
-        static int number = 0;
+    std::thread* thread_1 = new std::thread([log]{
+        int num = 0;
         while (true)
         {
-            block_q.enqueue(std::string("block queue ") + std::to_string(number++));
+            log->info("({:s}, {:d})", "thread_1", num);
+            num++;
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     });
 
-    auto* thread_2 = new std::thread([&block_q]{
+    std::thread* thread_2 = new std::thread([log]{
+        int num = 0;
         while (true)
         {
-            std::string tmp;
-
-            block_q.dequeue(tmp);
-            std::cout << tmp << std::endl;
+            log->info("({:s}, {:d})", "thread_2", num);
+            num++;
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
