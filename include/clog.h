@@ -57,22 +57,53 @@ public:
         });
     }
 
-    template <typename... Args> void trace(const char* fmt, const Args&... args);
-    template <typename... Args> void debug(const char* fmt, const Args&... args);
+    template <typename... Args>
+    void trace(const char* fmt, const Args&... args)
+    {
+        write("trace", fmt, args...);
+    }
+
+    template <typename... Args>
+    void debug(const char* fmt, const Args&... args)
+    {
+        write("debug", fmt, args...);
+    }
 
     template <typename... Args>
     void info(const char* fmt, const Args&... args)
     {
-        write(fmt, args...);
+        write("info", fmt, args...);
     }
 
-    template <typename... Args> void notice(const char* fmt, const Args&... args);
-    template <typename... Args> void warn(const char* fmt, const Args&... args);
+    template <typename... Args>
+    void notice(const char* fmt, const Args&... args)
+    {
+        write("notice", fmt, args...);
+    }
 
     template <typename... Args>
-    void write(const char* fmt, const Args&... args)
+    void warn(const char* fmt, const Args&... args)
+    {
+        write("warn", fmt, args...);
+    }
+
+    template <typename... Args>
+    void error(const char* fmt, const Args&... args)
+    {
+        write("error", fmt, args...);
+    }
+
+    template <typename... Args>
+    void fatal(const char* fmt, const Args&... args)
+    {
+        write("fatal", fmt, args...);
+    }
+
+    template <typename... Args>
+    void write(const char* level, const char* fmt, const Args&... args)
     {
         fmt::MemoryWriter out;
+        out.write("[{:s}]", level);
         out.write(fmt, args...);
         log_content msg(std::move(out));
         queue_->enqueue(std::move(msg));

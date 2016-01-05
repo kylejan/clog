@@ -21,7 +21,7 @@ int main()
         int num = 0;
         while (true)
         {
-            log->info("({:s}, {:d})", "thread_2", num);
+            log->warn("({:s}, {:d})", "thread_2", num);
             num++;
 
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
