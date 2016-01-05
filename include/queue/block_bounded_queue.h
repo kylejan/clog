@@ -1,3 +1,5 @@
+#pragma once
+
 #include <deque>
 #include <mutex>
 #include <assert.h>
