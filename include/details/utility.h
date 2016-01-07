@@ -25,28 +25,22 @@ inline void localtime(std::tm* tm)
     localtime(tm, &now_t);
 }
 
-inline std::string timepoint_str(const log_clock::time_point& tp)
+inline void timepoint_to_writer(fmt::MemoryWriter& writer, const log_clock::time_point& tp)
 {
-    auto nanods = std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count();
+    auto duration = tp.time_since_epoch();
+    auto nanos = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() % 1000000000;
 
-	std::time_t time_t_ = nanods / 1000000000;
-	nanods = nanods % 1000000000;
+    std::tm tm;
+    localtime(&tm);
 
-	std::tm tm;
-	localtime(&tm);
-
-	char buf_time[24]; // big enough to cover the result
-	size_t cnt = std::strftime(buf_time, sizeof(buf_time), "%Y-%m-%d %H:%M:%S", &tm);
-
-	if(cnt == 0)
-	{
-		std::cerr << "FATAL: failed to use strftime in logger" << std::endl;
-		std::terminate();
-	}
-
-	std::ostringstream oss;
-	oss << buf_time << "." << std::setfill('0') << std::setw(9) << nanods;
-	return oss.str();
+    // Faster (albeit uglier) way to format the line (5.6 million lines/sec under 10 threads)
+    writer << static_cast<unsigned int>(tm.tm_year + 1900) << '-'
+           << fmt::pad(static_cast<unsigned int>(tm.tm_mon + 1), 2, '0') << '-'
+           << fmt::pad(static_cast<unsigned int>(tm.tm_mday), 2, '0') << ' '
+           << fmt::pad(static_cast<unsigned int>(tm.tm_hour), 2, '0') << ':'
+           << fmt::pad(static_cast<unsigned int>(tm.tm_min), 2, '0') << ':'
+           << fmt::pad(static_cast<unsigned int>(tm.tm_sec), 2, '0') << '.'
+           << fmt::pad(static_cast<unsigned int>(nanos), 9, '0') << " ";
 }
 
 //fopen_s on non windows for writing
