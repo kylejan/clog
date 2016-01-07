@@ -28,7 +28,7 @@ should not be interpreted as representing official policies, either expressed or
 
 /*
 The code in its current form adds the license below:
-Copyright(c) 2015 Gabi Melman.
+Copyright(c) 2015 Kylejan.
 Distributed under the MIT License (http://opensource.org/licenses/MIT)
 */
 

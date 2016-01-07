@@ -5,38 +5,37 @@
 #include <atomic>
 #include <thread>
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
-
-#include "details/format.h"
+#include "details/utility.h"
 #include "details/mpmc_bounded_queue.h"
-
-typedef std::chrono::high_resolution_clock logger_clock;
 
 struct log_content
 {
     log_content() = default;
     log_content(fmt::MemoryWriter&& in_writer)
         : writer(std::move(in_writer))
+        , time_point(log_clock::now())
     {}
 
     log_content(const log_content& other)
+        : time_point(other.time_point)
     {
         writer << fmt::BasicStringRef<char>(other.writer.data(), other.writer.size());
     }
 
     log_content(log_content&& other)
         : writer(std::move(other.writer))
+        , time_point(std::move(other.time_point))
     {}
 
     log_content& operator = (log_content&& other)
     {
         writer = std::move(other.writer);
+        time_point = std::move(other.time_point);
         return *this;
     }
 
     fmt::MemoryWriter writer;
+    log_clock::time_point time_point;
 };
 
 class clog
@@ -52,7 +51,10 @@ public:
             {
                 log_content msg;
                 queue_->dequeue(msg);
-                if (msg.writer.size() != 0) std::cerr << msg.writer.c_str() << std::endl;
+                if (msg.writer.size() != 0)
+                {
+                    std::cerr << timepoint_str(msg.time_point) << " " << msg.writer.c_str() << std::endl;
+                }
             }
         });
     }
