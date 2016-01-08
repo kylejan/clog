@@ -34,6 +34,8 @@ Distributed under the MIT License (http://opensource.org/licenses/MIT)
 
 #pragma once
 
+#include "utility.h"
+
 #include <atomic>
 #include <assert.h>
 
@@ -61,7 +63,7 @@ public:
         delete [] buffer_;
     }
 
-    bool enqueue(T&& data)
+    bool try_enqueue(T&& data)
     {
         cell_t* cell;
         size_t pos = enqueue_pos_.load(std::memory_order_relaxed);
@@ -89,7 +91,7 @@ public:
         return true;
     }
 
-    bool dequeue(T& data)
+    bool try_dequeue(T& data)
     {
         cell_t* cell;
         size_t pos = dequeue_pos_.load(std::memory_order_relaxed);
@@ -112,6 +114,59 @@ public:
         data = std::move(cell->data_);
         cell->sequence_.store(pos + buffer_mask_ + 1, std::memory_order_release);
         return true;
+    }
+
+    void enqueue(T&& data)
+    {
+        if (!try_enqueue(std::move(data)))
+        {
+            auto last_op_time = log_clock::now();
+            auto now = last_op_time;
+            do
+            {
+                now = log_clock::now();
+                sleep_or_yield(now, last_op_time);
+            }
+            while (!try_enqueue(std::move(data)));
+        }
+    }
+
+    void dequeue(T& data)
+    {
+        if (!try_dequeue(data))
+        {
+            auto last_op_time = log_clock::now();
+            auto now = last_op_time;
+            do
+            {
+                now = log_clock::now();
+                sleep_or_yield(now, last_op_time);
+            }
+            while (!try_dequeue(data));
+        }
+    }
+
+    inline void sleep_or_yield(const log_clock::time_point& now, const log_clock::time_point& last_op_time)
+    {
+        using std::chrono::milliseconds;
+        using namespace std::this_thread;
+
+        auto time_since_op = now - last_op_time;
+
+        // spin upto 1 ms
+        if (time_since_op <= milliseconds(1))
+            return;
+
+        // yield upto 10ms
+        if (time_since_op <= milliseconds(10))
+            return yield();
+
+
+        // sleep for half of duration since last op
+        if (time_since_op <= milliseconds(100))
+            return sleep_for(time_since_op / 2);
+
+        return sleep_for(milliseconds(100));
     }
 
 private:

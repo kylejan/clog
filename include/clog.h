@@ -7,6 +7,7 @@
 
 #include "details/utility.h"
 #include "details/mpmc_bounded_queue.h"
+#include "details/block_bounded_queue.h"
 
 struct log_content
 {
@@ -44,7 +45,7 @@ public:
     static clog* get_clog();
 
     clog()
-        : queue_(new mpmc_bounded_queue<log_content>(4096))
+        : queue_(new mpmc_bounded_queue<log_content>(8192))
     {
         io_thread_ = new std::thread([this]{
             while (true)
