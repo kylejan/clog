@@ -43,8 +43,6 @@ struct log_content
 class clog
 {
 public:
-    static clog* get_clog();
-
     clog()
         : queue_(new mpmc_bounded_queue<log_content>(8192))
         , file_name_(get_datetime_timepoint() + ".log")
