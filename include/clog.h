@@ -61,7 +61,7 @@ public:
         });
     }
 
-    void join()
+    ~clog()
     {
         io_thread_->join();
     }

@@ -26,7 +26,5 @@ int main()
     thread_1->join();
     thread_2->join();
     
-    get_clog()->join();
-
     return 0;
 }
