@@ -63,6 +63,13 @@ public:
         delete [] buffer_;
     }
 
+    bool empty()
+    {
+        size_t en_pos = enqueue_pos_.load(std::memory_order_relaxed);
+        size_t de_pos = dequeue_pos_.load(std::memory_order_relaxed);
+        return (en_pos != 0 && en_pos == de_pos);
+    }
+
     bool try_enqueue(T&& data)
     {
         cell_t* cell;

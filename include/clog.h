@@ -47,8 +47,9 @@ public:
     clog()
         : queue_(new mpmc_bounded_queue<log_content>(8192))
     {
-        io_thread_ = new std::thread([this]{
-            while (true)
+        io_thread_ = new std::thread([this]
+        {
+            while (!queue_->empty())
             {
                 log_content msg;
                 queue_->dequeue(msg);
@@ -58,6 +59,11 @@ public:
                 }
             }
         });
+    }
+
+    void join()
+    {
+        io_thread_->join();
     }
 
     template <typename... Args>
@@ -112,24 +118,10 @@ public:
 private:
     mpmc_bounded_queue<log_content>* queue_;
     std::thread* io_thread_;
-
-    static std::atomic<clog*> instance_;
-    static std::mutex mutex_;
 };
 
-std::atomic<clog*> clog::instance_;
-std::mutex clog::mutex_;
-
-clog* clog::get_clog()
+clog* get_clog()
 {
-    if (instance_.load() == nullptr)
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-        if (instance_.load() == nullptr)
-        {
-            auto* tmp = new clog();
-            instance_.store(tmp);
-        }
-    }
-    return instance_.load();
+    static clog clog_instance;
+    return &clog_instance;
 }
