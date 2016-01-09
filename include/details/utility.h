@@ -1,10 +1,9 @@
 #pragma once
 
 #include <ctime>
+#include <cstdio>
 #include <iomanip>
 #include <iostream>
-#include <fstream>
-#include <sstream>
 
 #include "format.h"
 
@@ -25,7 +24,7 @@ inline void localtime(std::tm* tm)
     localtime(tm, &now_t);
 }
 
-inline void timepoint_to_writer(fmt::MemoryWriter& writer, const log_clock::time_point& tp)
+inline void write_nano_timepoint(fmt::MemoryWriter& writer, const log_clock::time_point& tp)
 {
     auto duration = tp.time_since_epoch();
     auto nanos = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count() % 1000000000;
@@ -41,6 +40,23 @@ inline void timepoint_to_writer(fmt::MemoryWriter& writer, const log_clock::time
            << fmt::pad(static_cast<unsigned int>(tm.tm_min), 2, '0') << ':'
            << fmt::pad(static_cast<unsigned int>(tm.tm_sec), 2, '0') << '.'
            << fmt::pad(static_cast<unsigned int>(nanos), 9, '0') << " ";
+}
+
+inline std::string get_datetime_timepoint()
+{
+    fmt::MemoryWriter writer;
+
+    std::tm tm;
+    localtime(&tm);
+
+    writer << static_cast<unsigned int>(tm.tm_year + 1900) << '-'
+           << fmt::pad(static_cast<unsigned int>(tm.tm_mon + 1), 2, '0') << '-'
+           << fmt::pad(static_cast<unsigned int>(tm.tm_mday), 2, '0') << ' '
+           << fmt::pad(static_cast<unsigned int>(tm.tm_hour), 2, '0') << ':'
+           << fmt::pad(static_cast<unsigned int>(tm.tm_min), 2, '0') << ':'
+           << fmt::pad(static_cast<unsigned int>(tm.tm_sec), 2, '0');
+
+    return writer.str();
 }
 
 //fopen_s on non windows for writing

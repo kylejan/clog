@@ -16,9 +16,10 @@ struct log_content
     template <typename... Args>
     log_content(const char* level, const char* fmt, const Args... args)
     {
-        timepoint_to_writer(writer, log_clock::now());
+        write_nano_timepoint(writer, log_clock::now());
         writer.write("[{:s}] ", level);
         writer.write(fmt, args...);
+        writer.write("\n");
     }
 
     log_content(const log_content& other)
@@ -46,24 +47,49 @@ public:
 
     clog()
         : queue_(new mpmc_bounded_queue<log_content>(8192))
+        , file_name_(get_datetime_timepoint() + ".log")
     {
-        io_thread_ = new std::thread([this]
+        if (!file_exists(file_name_))
         {
-            while (!queue_->empty())
-            {
-                log_content msg;
-                queue_->dequeue(msg);
-                if (msg.writer.size() != 0)
-                {
-                    std::cerr << msg.writer.c_str() << std::endl;
-                }
-            }
-        });
+            fopen_s(&file_, file_name_, "wb");
+        }
+        else
+        {
+            fopen_s(&file_, file_name_, "ab");
+        }
     }
 
     ~clog()
     {
-        io_thread_->join();
+        while (!queue_->empty());
+        exit_signal_.store(true, std::memory_order_release);
+        std::fflush(file_);
+    }
+
+    clog(const clog&) = delete;
+    clog(clog&&) = delete;
+    clog& operator = (const clog&) = delete;
+    clog& operator = (clog&&) = delete;
+
+    void init()
+    {
+        io_thread_ = new std::thread(&clog::process_queue_msg, this);
+    }
+
+    void process_queue_msg()
+    {
+        while (true)
+        {
+            if (queue_->empty()) continue;
+
+            log_content msg;
+            queue_->dequeue(msg);
+
+            size_t msg_size = msg.writer.size();
+            std::fwrite(msg.writer.data(), 1, msg_size, file_);
+
+            if (exit_signal_.load(std::memory_order_acquire)) break;
+        }
     }
 
     template <typename... Args>
@@ -118,6 +144,12 @@ public:
 private:
     mpmc_bounded_queue<log_content>* queue_;
     std::thread* io_thread_;
+
+    std::atomic<bool> exit_signal_{false};
+    std::atomic<bool> exit_accept_{false};
+
+    std::FILE* file_;
+    std::string file_name_;
 };
 
 clog* get_clog()

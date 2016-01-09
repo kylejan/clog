@@ -61,6 +61,12 @@ public:
         cv_.notify_one();
     }
 
+    bool empty()
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+        return enqueue_pos_ == dequeue_pos_;
+    }
+
     block_bounded_queue(const block_bounded_queue&) = delete;
     void operator = (const block_bounded_queue&) = delete;
 
