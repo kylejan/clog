@@ -43,10 +43,11 @@ struct log_content
 class clog
 {
 public:
-    clog()
-        : queue_(new mpmc_bounded_queue<log_content>(8192))
-        , file_name_(get_datetime_timepoint() + ".log")
+    clog(const std::string& filename = "clog.log", bool is_append_datetime = true)
+        : file_name_(filename)
     {
+        if (is_append_datetime) file_name_ = get_datetime_timepoint() + "." + file_name_;
+
         if (!file_exists(file_name_))
         {
             fopen_s(&file_, file_name_, "wb");
@@ -62,15 +63,18 @@ public:
         while (!queue_->empty());
         exit_signal_.store(true, std::memory_order_release);
         std::fflush(file_);
+        std::fclose(file_);
     }
 
+    clog() = delete;
     clog(const clog&) = delete;
     clog(clog&&) = delete;
     clog& operator = (const clog&) = delete;
     clog& operator = (clog&&) = delete;
 
-    void init()
+    void init(std::int64_t queue_size = 8192)
     {
+        queue_ = new mpmc_bounded_queue<log_content>(queue_size);
         io_thread_ = new std::thread(&clog::process_queue_msg, this);
     }
 
@@ -150,8 +154,8 @@ private:
     std::string file_name_;
 };
 
-clog* get_clog()
+clog* get_clog(const std::string& filename = "clog.log", bool is_append_datetime = true)
 {
-    static clog clog_instance;
+    static clog clog_instance(filename, is_append_datetime);
     return &clog_instance;
 }
