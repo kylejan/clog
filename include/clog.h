@@ -148,7 +148,6 @@ private:
     std::thread* io_thread_;
 
     std::atomic<bool> exit_signal_{false};
-    std::atomic<bool> exit_accept_{false};
 
     std::FILE* file_;
     std::string file_name_;
