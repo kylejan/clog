@@ -62,7 +62,6 @@ public:
     {
         while (!queue_->empty());
         exit_signal_.store(true, std::memory_order_release);
-        std::fflush(file_);
         std::fclose(file_);
     }
 
@@ -80,15 +79,16 @@ public:
 
     void process_queue_msg()
     {
+        static log_content msg;
         while (true)
         {
             if (queue_->empty()) continue;
 
-            log_content msg;
             queue_->dequeue(msg);
 
             size_t msg_size = msg.writer.size();
             std::fwrite(msg.writer.data(), 1, msg_size, file_);
+            std::fflush(file_);
 
             if (exit_signal_.load(std::memory_order_acquire)) break;
         }
