@@ -35,12 +35,13 @@ Distributed under the MIT License (http://opensource.org/licenses/MIT)
 #pragma once
 
 #include "utility.h"
+#include "aslog_queue.h"
 
 #include <atomic>
 #include <assert.h>
 
 template<typename T>
-class mpmc_bounded_queue
+class mpmc_bounded_queue : public aslog_queue<T>
 {
 public:
     using item_type = T;

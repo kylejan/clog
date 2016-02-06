@@ -40,10 +40,10 @@ struct log_content
     fmt::MemoryWriter writer;
 };
 
-class clog
+class aslog
 {
 public:
-    clog(const std::string& filename = "clog.log", bool is_append_datetime = true)
+    aslog(const std::string& filename = "aslog.log", bool is_append_datetime=true)
         : file_name_(filename)
     {
         if (is_append_datetime) file_name_ = get_datetime_timepoint() + "." + file_name_;
@@ -58,23 +58,31 @@ public:
         }
     }
 
-    ~clog()
+    ~aslog()
     {
         while (!queue_->empty());
         exit_signal_.store(true, std::memory_order_release);
         std::fclose(file_);
     }
 
-    clog() = delete;
-    clog(const clog&) = delete;
-    clog(clog&&) = delete;
-    clog& operator = (const clog&) = delete;
-    clog& operator = (clog&&) = delete;
+    aslog() = delete;
+    aslog(const aslog&) = delete;
+    aslog(aslog&&) = delete;
+    aslog& operator = (const aslog&) = delete;
+    aslog& operator = (aslog&&) = delete;
 
-    void init(std::int64_t queue_size = 8192)
+    void init(bool is_lock_free=true, std::int64_t queue_size = 8192)
     {
-        queue_ = new mpmc_bounded_queue<log_content>(queue_size);
-        io_thread_ = new std::thread(&clog::process_queue_msg, this);
+        if (is_lock_free)
+        {
+            queue_ = new mpmc_bounded_queue<log_content>(queue_size);
+        }
+        else
+        {
+            queue_ = new block_bounded_queue<log_content>(queue_size);
+        }
+
+        io_thread_ = new std::thread(&aslog::process_queue_msg, this);
     }
 
     void process_queue_msg()
@@ -144,7 +152,7 @@ public:
     }
 
 private:
-    mpmc_bounded_queue<log_content>* queue_;
+    aslog_queue<log_content>* queue_;
     std::thread* io_thread_;
 
     std::atomic<bool> exit_signal_{false};
@@ -153,8 +161,8 @@ private:
     std::string file_name_;
 };
 
-clog* get_clog(const std::string& filename = "clog.log", bool is_append_datetime = true)
+aslog* get_aslog(const std::string& filename = "aslog.log", bool is_append_datetime=true)
 {
-    static clog clog_instance(filename, is_append_datetime);
-    return &clog_instance;
+    static aslog aslog_instance(filename, is_append_datetime);
+    return &aslog_instance;
 }

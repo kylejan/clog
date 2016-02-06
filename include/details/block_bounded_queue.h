@@ -1,12 +1,14 @@
 #pragma once
 
+#include "aslog_queue.h"
+
 #include <deque>
 #include <mutex>
 #include <assert.h>
 #include <condition_variable>
 
 template <typename T>
-class block_bounded_queue
+class block_bounded_queue : public aslog_queue<T>
 {
 public:
     block_bounded_queue(size_t buffer_size)

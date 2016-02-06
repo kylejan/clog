@@ -1,17 +1,17 @@
-#include "clog.h"
+#include "aslog.h"
 
 #include <chrono>
 #include <iostream>
 
 int main()
 {
-    get_clog()->init();
+    get_aslog()->init();
 
     std::thread* thread_1 = new std::thread([]{
         int num = 500000;
         while (num--)
         {
-            get_clog()->info("({:s}, {:d})", "thread_1", num);
+            get_aslog()->info("({:s}, {:d})", "thread_1", num);
         }
     });
 
@@ -19,7 +19,7 @@ int main()
         int num = 500000;
         while (num--)
         {
-            get_clog()->warn("({:s}, {:d})", "thread_2", num);
+            get_aslog()->warn("({:s}, {:d})", "thread_2", num);
         }
     });
 
